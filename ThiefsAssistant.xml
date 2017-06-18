@@ -1,7 +1,7 @@
 <GuiXml>
   <Controls>
     <TopLevelControl name="ThiefsAssistantWindow" mouseEnabled="true" movable="true" clampedToScreen="true">
-      <Dimensions y="30" x="140" />
+      <Dimensions y="30" x="800" />
       <Anchor point="CENTER" />
       <OnUpdate>
         ThiefsAssistantOnUpdate()
@@ -13,6 +13,27 @@
         </Label>
         <Label name="$(parent)BountyValue" font="ZoFontGameSmall">
           <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="75" offsetY="5" />
+        </Label>
+        
+        <Label name="$(parent)FenceSellsTitle" text="Sells Remaining:" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="155" offsetY="5" />
+        </Label>
+        <Label name="$(parent)FenceSellsValue" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="255" offsetY="5" />
+        </Label>
+        
+        <Label name="$(parent)FenceLaundersTitle" text="Launders Remaining:" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="310" offsetY="5" />
+        </Label>
+        <Label name="$(parent)FenceLaundersValue" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="430" offsetY="5" />
+        </Label>
+
+        <Label name="$(parent)FenceTimerTitle" text="Fence Reset:" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="490" offsetY="5" />
+        </Label>
+        <Label name="$(parent)FenceTimerValue" font="ZoFontGameSmall">
+          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="570" offsetY="5" />
         </Label>
       </Controls>
     </TopLevelControl>
