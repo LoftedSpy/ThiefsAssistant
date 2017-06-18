@@ -1,0 +1,10 @@
+## Title: |cFF0000Thief's Assistant|r
+## APIVersion: 100019
+## Version: 0.1
+## Description: Displays helpful information regarding the justice meter and manages stolen items.
+## Author: LoftedSpy
+## SavedVariables: ThiefsAssistantSavedVars
+
+ThiefsAssistant.lua
+
+ThiefsAssistant.xml
