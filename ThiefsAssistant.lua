@@ -2,69 +2,132 @@
 ThiefsAssistant = {}
 
 local ADDON_NAME = "ThiefsAssistant"
-local UPDATE_TIMER = 300
+ThiefsAssistant.name = ADDON_NAME
+local VERSION = 0.53
+ThiefsAssistant.version = VERSION
+local UPDATE_TIMER = 30
 local time = 0
 
-function ThiefsAssistant:Init()
-	--Determine required length of bar on this line
-
-end
+local defaults = {
+	window = {
+		["x"] = 550,
+		["y"] = 900,
+		["showSells"] = true,
+		["showLaunders"] = true,
+		["showFenceResetTimer"] = true,
+		["showBountyTimer"] = true,
+		["showBounty"] = true,
+		["timeFormatStyle"] = TIME_FORMAT_STYLE_COLONS,
+		["timeFormatPrecision"] = TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR,
+	},
+	BData = {
+		["lastVal"] = 0,
+		heat = {
+		
+		},
+	},
+}
 
 function ThiefsAssistant.OnAddonLoad(eventType, addonName)
 	if addonName ~= ADDON_NAME then return end
 	EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 
+	local saveData = ZO_SavedVars:NewAccountWide("ThiefsAssistantSavedVars", VERSION, nil, defaults)
+	ThiefsAssistant.savedVars = saveData
+
+	ThiefsAssistant.timeStyle = TIME_FORMAT_STYLE_COLONS
+	ThiefsAssistant.timePrecision = TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR
+	--ThiefsAssistant.timeStyle = saveData.window["timeFormatStyle"]
+	--ThiefsAssistant.timePrecision = saveData.window["timeFormatPrecision"]
+
+	ThiefsAssistant.setUpMenu()
+
+	ThiefsAssistant.estimatedBountyTime = (GetFullBountyPayoffAmount() / (0.007454646 + (0.001675579 * GetUnitLevel("player")))) + (GetPlayerInfamyData() / 2)	--estimated bounty time formula
+	ThiefsAssistant.bountyWillHit0In = GetTimeStamp() + ThiefsAssistant.estimatedBountyTime
+
 	local window = ThiefsAssistantWindow
 
-	-- Add textures
-	-- put this in a loop for god's sake
-	local texB = WINDOW_MANAGER:CreateControl("ThiefsAssistantTextureBounty", window, CT_TEXTURE)
-	texB:SetDimensions(20, 20)
-	texB:SetAnchor(TOPLEFT, window, TOPLEFT, 5, 5)
-	texB:SetTexture("esoui/art/stats/justice_bounty_icon-white.dds")
+	-- makes a new texture
+	local function NewTexture(texture, name, xCoord, hidden)
+		tex = WINDOW_MANAGER:CreateControl(("ThiefsAssistantWindowTexture" .. name), window, CT_TEXTURE)
+		tex:SetDimensions(20, 20)
+		tex:SetAnchor(TOPLEFT, window, TOPLEFT, xCoord, 5)
+		tex:SetTexture(texture)
+		tex:SetHidden(not hidden)
+	end
 
-	local texS = WINDOW_MANAGER:CreateControl("ThiefsAssistantTextureSells", window, CT_TEXTURE)
-	texS:SetDimensions(20, 20)
-	texS:SetAnchor(TOPLEFT, window, TOPLEFT, 130, 5)
-	texS:SetTexture("esoui/art/stats/justice_bounty_icon-red.dds")
+	-- makes a new label from virtual. Text optional
+	local function AddLabel(name, xCoord, hidden, text)
+		lbl = WINDOW_MANAGER:CreateControlFromVirtual(("$(parent)" .. name), window, "ThiefsAssistantLabelTemplate")
+		lbl:SetAnchor(TOPLEFT, window, TOPLEFT, xCoord, 5)
+		if(text) then lbl:SetText(text) end
+		lbl:SetHidden(not hidden)
+	end
 
-	local texL = WINDOW_MANAGER:CreateControl("ThiefsAssistantTextureLaunders", window, CT_TEXTURE)
-	texL:SetDimensions(20, 20)
-	texL:SetAnchor(TOPLEFT, window, TOPLEFT, 285, 5)
-	texL:SetTexture("esoui/art/stats/justice_bounty_icon-red.dds")
+	-- Add textures and controls
+	local savedWindowData = saveData.window
+	local xLocation = 5
+	
+	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "Bounty", xLocation, savedWindowData["showBounty"])
+	AddLabel("BountyTitle", xLocation + 25, savedWindowData["showBounty"], "Bounty:")
+	AddLabel("BountyValue", xLocation + 70, savedWindowData["showBounty"], GetFullBountyPayoffAmount())
+	if savedWindowData["showBounty"] then xLocation = xLocation + 125 end
 
-	local texFT = WINDOW_MANAGER:CreateControl("ThiefsAssistantTextureFenceTimer", window, CT_TEXTURE)
-	texFT:SetDimensions(20, 20)
-	texFT:SetAnchor(TOPLEFT, window, TOPLEFT, 465, 5)
-	texFT:SetTexture("esoui/art/stats/justice_bounty_icon-white.dds")
+	local totalSells, sellsUsed, fenceResetTime = GetFenceSellTransactionInfo()
+	
+	NewTexture("esoui/art/stats/justice_bounty_icon-red.dds", "FenceSells", xLocation, savedWindowData["showSells"])
+	AddLabel("FenceSellsTitle", xLocation + 25, savedWindowData["showSells"], "Sells Remaining:")
+	AddLabel("FenceSellsValue", xLocation + 125, savedWindowData["showSells"], totalSells - sellsUsed .. "/" .. totalSells)
+	if savedWindowData["showSells"] then xLocation = xLocation + 155 end
+
+	local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
+
+	
+	NewTexture("esoui/art/stats/justice_bounty_icon-red.dds", "FenceLaunders", xLocation, savedWindowData["showLaunders"])
+	AddLabel("FenceLaundersTitle", xLocation + 25, savedWindowData["showLaunders"], "Launders Remaining:")
+	AddLabel("FenceLaundersValue", xLocation + 145, savedWindowData["showLaunders"], totalLaunders - laundersUsed .. "/" .. totalLaunders)
+	if savedWindowData["showLaunders"] then xLocation = xLocation + 180 end
+
+	
+	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "FenceTimer", xLocation, savedWindowData["showFenceResetTimer"])
+	AddLabel("FenceTimerTitle", xLocation + 25, savedWindowData["showFenceResetTimer"], "Fence Reset:")
+	AddLabel("FenceTimerValue", xLocation + 105, savedWindowData["showFenceResetTimer"], FormatTimeSeconds(timeSeconds, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	if savedWindowData["showFenceResetTimer"] then xLocation = xLocation + 145 end
+
+	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "BountyTimer", xLocation, savedWindowData["showFenceResetTimer"])
+	AddLabel("BountyTimerTitle", xLocation + 25, savedWindowData["showBountyTimer"], "Bounty Reset:")
+	AddLabel("BountyTimerValue", xLocation + 105, savedWindowData["showBountyTimer"], FormatTimeSeconds(0, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	if savedWindowData["showBountyTimer"] then xLocation = xLocation + 145 end
+
 
 	-- The following event only triggers when bounty increases so updater is still necessary
 	-- EVENT_JUSTICE_INFAMY_UPDATED will also work
-	EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_BOUNTY_PAYOFF_AMOUNT_UPDATED, function(event, oldBounty, newBounty, isInitialize)
-		GetControl(window, "BountyValue"):SetText(newBounty)
-		time = 0
-	end)
+	if(saveData.window["showBounty"]) then
+		EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_BOUNTY_PAYOFF_AMOUNT_UPDATED, function(event, oldBounty, newBounty, isInitialize)
+			GetControl(window, "BountyValue"):SetText(newBounty)
+			time = 0
+		end)
+		ThiefsAssistant.registeredForJusticeUpdate = true
+	else
+		ThiefsAssistant.registeredForJusticeUpdate = false
+	end
 
-	EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_FENCE_UPDATE, function()
-		local totalSells, sellsUsed = GetFenceSellTransactionInfo()
-		local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
-		GetControl(window, "FenceSellsValue"):SetText(totalSells - sellsUsed .. "/" .. totalSells)
-		GetControl(window, "FenceLaundersValue"):SetText(totalLaunders - laundersUsed .. "/" .. totalLaunders)
-		time = 0
-	end)
-
-	-- Initialize values
-	GetControl(window, "BountyValue"):SetText(GetFullBountyPayoffAmount())
-	local totalSells, sellsUsed, fenceResetTime = GetFenceSellTransactionInfo()
-	local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
-	GetControl(window, "FenceSellsValue"):SetText(totalSells - sellsUsed .. "/" .. totalSells)
-	GetControl(window, "FenceLaundersValue"):SetText(totalLaunders - laundersUsed .. "/" .. totalLaunders)
-	GetControl(window, "FenceTimerValue"):SetText(fenceResetTime)
-
-	local saveData = ZO_SavedVars:NewAccountWide("ThiefsAssistantSavedVars", 1)
-	ThiefsAssistant.savedVars = saveData
-	local test = saveData.window or {}
-	saveData.window = test
+	if(ThiefsAssistant.savedVars.window["showSells"] or ThiefsAssistant.savedVars.window["showLaunders"]) then
+		EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_FENCE_UPDATE, function()
+			if(ThiefsAssistant.savedVars.window["showSells"]) then
+				local totalSells, sellsUsed = GetFenceSellTransactionInfo()
+				GetControl(window, "FenceSellsValue"):SetText(totalSells - sellsUsed .. "/" .. totalSells)
+			end
+			if(ThiefsAssistant.savedVars.window["showLaunders"]) then
+				local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
+				GetControl(window, "FenceLaundersValue"):SetText(totalLaunders - laundersUsed .. "/" .. totalLaunders)
+			end
+			time = 0
+		end)
+		ThiefsAssistant.registeredForFenceUpdate = true
+	else
+		ThiefsAssistant.registeredForFenceUpdate = false
+	end
 
 	-- Restore position of window
 	if(saveData.window) then
@@ -80,28 +143,138 @@ function ThiefsAssistant.OnAddonLoad(eventType, addonName)
 	end)
 end
 
-local function secondsToTime(original)
-	seconds = math.floor(original % 60)
-	hours = math.floor(original / 3600)
-	minutes = math.floor(original / 60) - (60 * hours)
-	
-	result = hours .. ":" .. minutes .. ":" .. seconds
-	return result
+function ThiefsAssistant.UpdateAllTimers()
+	if(ThiefsAssistant.savedVars.window["showFenceResetTimer"]) then
+		local a, b, timeSeconds = GetFenceSellTransactionInfo()
+		GetControl(ThiefsAssistantWindow, "FenceTimerValue"):SetText(FormatTimeSeconds(timeSeconds, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	end
+	if(ThiefsAssistant.savedVars.window["showBountyTimer"] and GetFullBountyPayoffAmount() > 0 and ThiefsAssistant.bountyWillHit0In - GetTimeStamp() > 0) then
+		GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(ThiefsAssistant.bountyWillHit0In - GetTimeStamp(), ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	else
+		GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(0, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	end
 end
 
 function ThiefsAssistantOnUpdate()
-	time = time + 1
-	-- Every UPDATE_TIMER frames update values
-	if(time > UPDATE_TIMER) then
-		GetControl(ThiefsAssistantWindow, "BountyValue"):SetText(GetFullBountyPayoffAmount())
-		time = 0
-	end
-	-- Every 30 frames update timers
-	if(time % 30 == 0) then
-		local a, b, timeSeconds = GetFenceSellTransactionInfo()
-		GetControl(ThiefsAssistantWindow, "FenceTimerValue"):SetText(secondsToTime(timeSeconds))
-		time = 0
+	if(ThiefsAssistant.savedVars) then
+		time = time + 1
+		-- Every 30 frames update timers
+		if(time % 30 == 0) then
+			ThiefsAssistant.UpdateAllTimers()
+		end
+		-- Every UPDATE_TIMER frames update values
+		if(time == UPDATE_TIMER) then
+			time = 0
+			if(not ThiefsAssistant.oldBounty or ThiefsAssistant.oldBounty ~= GetFullBountyPayoffAmount()) then
+				ThiefsAssistant.estimatedBountyTime = (GetFullBountyPayoffAmount() / (0.0050 + (0.0017 * (GetUnitLevel("player") - 1)))) + (GetPlayerInfamyData() / 2)	--estimated bounty time formula
+				ThiefsAssistant.bountyWillHit0In = GetTimeStamp() + ThiefsAssistant.estimatedBountyTime
+				ThiefsAssistant.oldBounty = GetFullBountyPayoffAmount()
+				d("updating time till bounty reset")
+			end
+			if(ThiefsAssistant.savedVars.window["showBounty"]) then
+				GetControl(ThiefsAssistantWindow, "BountyValue"):SetText(GetFullBountyPayoffAmount())
+			end
+			-- Stores data related to bounties
+			local savedLastVal = ThiefsAssistant.savedVars.BData["lastVal"]
+			local currentVal = GetFullBountyPayoffAmount()
+			local currentHeat = GetPlayerInfamyData()
+			if(savedLastVal ~= currentVal or not savedLastVal or currentHeat ~= 0) then
+				ThiefsAssistant.savedVars.BData["lastVal"] = currentVal
+				ThiefsAssistant.savedVars.BData[GetTimeStamp() .. "_" .. (GetUnitLevel("player") + GetUnitChampionPoints("player"))] = currentVal
+				ThiefsAssistant.savedVars.BData.heat[GetTimeStamp() .. "_" .. (GetUnitLevel("player") + GetUnitChampionPoints("player")) .. "_heat"] = currentHeat
+				d("bounty changed")
+			end
+		end
 	end
 end
+
+local function UpdateWindowFromSettings()
+	savedWindowData = ThiefsAssistant.savedVars.window
+	win = ThiefsAssistantWindow
+	xLocation = 5
+	if(savedWindowData["showBounty"]) then
+		GetControl(win, "TextureBounty"):SetHidden(false)
+		GetControl(win, "TextureBounty"):ClearAnchors()
+		GetControl(win, "TextureBounty"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
+		GetControl(win, "BountyTitle"):SetHidden(false)
+		GetControl(win, "BountyTitle"):ClearAnchors()
+		GetControl(win, "BountyTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
+		GetControl(win, "BountyValue"):SetHidden(false)
+		GetControl(win, "BountyValue"):ClearAnchors()
+		GetControl(win, "BountyValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 70, 5)
+		xLocation = xLocation + 125
+	else
+		GetControl(win, "TextureBounty"):SetHidden(true)
+		GetControl(win, "BountyTitle"):SetHidden(true)
+		GetControl(win, "BountyValue"):SetHidden(true)
+	end
+	if(savedWindowData["showSells"]) then
+		GetControl(win, "TextureFenceSells"):SetHidden(false)
+		GetControl(win, "TextureFenceSells"):ClearAnchors()
+		GetControl(win, "TextureFenceSells"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
+		GetControl(win, "FenceSellsTitle"):SetHidden(false)
+		GetControl(win, "FenceSellsTitle"):ClearAnchors()
+		GetControl(win, "FenceSellsTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
+		GetControl(win, "FenceSellsValue"):SetHidden(false)
+		GetControl(win, "FenceSellsValue"):ClearAnchors()
+		GetControl(win, "FenceSellsValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 125, 5)
+		xLocation = xLocation + 155
+	else
+		GetControl(win, "TextureFenceSells"):SetHidden(true)
+		GetControl(win, "FenceSellsTitle"):SetHidden(true)
+		GetControl(win, "FenceSellsValue"):SetHidden(true)
+	end
+	if(savedWindowData["showLaunders"]) then
+		GetControl(win, "TextureFenceLaunders"):SetHidden(false)
+		GetControl(win, "TextureFenceLaunders"):ClearAnchors()
+		GetControl(win, "TextureFenceLaunders"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
+		GetControl(win, "FenceLaundersTitle"):SetHidden(false)
+		GetControl(win, "FenceLaundersTitle"):ClearAnchors()
+		GetControl(win, "FenceLaundersTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
+		GetControl(win, "FenceLaundersValue"):SetHidden(false)
+		GetControl(win, "FenceLaundersValue"):ClearAnchors()
+		GetControl(win, "FenceLaundersValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 145, 5)
+		xLocation = xLocation + 180
+	else
+		GetControl(win, "TextureFenceLaunders"):SetHidden(true)
+		GetControl(win, "FenceLaundersTitle"):SetHidden(true)
+		GetControl(win, "FenceLaundersValue"):SetHidden(true)
+	end
+	if(savedWindowData["showFenceResetTimer"]) then
+		GetControl(win, "TextureFenceTimer"):SetHidden(false)
+		GetControl(win, "TextureFenceTimer"):ClearAnchors()
+		GetControl(win, "TextureFenceTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
+		GetControl(win, "FenceTimerTitle"):SetHidden(false)
+		GetControl(win, "FenceTimerTitle"):ClearAnchors()
+		GetControl(win, "FenceTimerTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
+		GetControl(win, "FenceTimerValue"):SetHidden(false)
+		GetControl(win, "FenceTimerValue"):ClearAnchors()
+		GetControl(win, "FenceTimerValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 105, 5)
+		xLocation = xLocation + 145
+	else
+		GetControl(win, "TextureFenceTimer"):SetHidden(true)
+		GetControl(win, "FenceTimerTitle"):SetHidden(true)
+		GetControl(win, "FenceTimerValue"):SetHidden(true)
+	end
+	if(savedWindowData["showBountyTimer"]) then
+		GetControl(win, "TextureBountyTimer"):SetHidden(false)
+		GetControl(win, "TextureBountyTimer"):ClearAnchors()
+		GetControl(win, "TextureBountyTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
+		GetControl(win, "BountyTimerTitle"):SetHidden(false)
+		GetControl(win, "BountyTimerTitle"):ClearAnchors()
+		GetControl(win, "BountyTimerTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
+		GetControl(win, "BountyTimerValue"):SetHidden(false)
+		GetControl(win, "BountyTimerValue"):ClearAnchors()
+		GetControl(win, "BountyTimerValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 105, 5)
+		xLocation = xLocation + 145
+	else
+		GetControl(win, "TextureBountyTimer"):SetHidden(true)
+		GetControl(win, "BountyTimerTitle"):SetHidden(true)
+		GetControl(win, "BountyTimerValue"):SetHidden(true)
+	end
+end
+
+-- for the mainMenu.lua file to use for window settings updates
+ThiefsAssistant.UpdateSettings = UpdateWindowFromSettings
 
 EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, ThiefsAssistant.OnAddonLoad)

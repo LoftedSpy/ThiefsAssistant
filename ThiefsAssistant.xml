@@ -8,34 +8,8 @@
       </OnUpdate>
       <Controls>
         <Backdrop name="$(parent)Bg" inherits="ZO_DefaultBackdrop" />
-        <Label name="$(parent)BountyTitle" text="Bounty:" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="30" offsetY="5" />
-        </Label>
-        <Label name="$(parent)BountyValue" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="75" offsetY="5" />
-        </Label>
-        
-        <Label name="$(parent)FenceSellsTitle" text="Sells Remaining:" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="155" offsetY="5" />
-        </Label>
-        <Label name="$(parent)FenceSellsValue" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="255" offsetY="5" />
-        </Label>
-        
-        <Label name="$(parent)FenceLaundersTitle" text="Launders Remaining:" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="310" offsetY="5" />
-        </Label>
-        <Label name="$(parent)FenceLaundersValue" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="430" offsetY="5" />
-        </Label>
-
-        <Label name="$(parent)FenceTimerTitle" text="Fence Reset:" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="490" offsetY="5" />
-        </Label>
-        <Label name="$(parent)FenceTimerValue" font="ZoFontGameSmall">
-          <Anchor point="TOPLEFT" relativePoint="TOPLEFT" offsetX="570" offsetY="5" />
-        </Label>
       </Controls>
     </TopLevelControl>
+    <Label name="ThiefsAssistantLabelTemplate" text="default" font="ZoFontGameSmall" virtual="true" />
   </Controls>
 </GuiXml>
