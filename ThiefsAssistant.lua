@@ -3,12 +3,15 @@ ThiefsAssistant = {}
 
 local ADDON_NAME = "ThiefsAssistant"
 ThiefsAssistant.name = ADDON_NAME
-local VERSION = 0.53
+local VERSION = 0.6
 ThiefsAssistant.version = VERSION
-local UPDATE_TIMER = 30
+--local UPDATE_TIMER = 30
 local time = 0
+local timerTime = 0
 
 local defaults = {
+	["updateSpeed"] = 60,
+	["updateSpeedTimers"] = 10,
 	window = {
 		["x"] = 550,
 		["y"] = 900,
@@ -17,14 +20,13 @@ local defaults = {
 		["showFenceResetTimer"] = true,
 		["showBountyTimer"] = true,
 		["showBounty"] = true,
+		["needBountyForTimer"] = true,
 		["timeFormatStyle"] = TIME_FORMAT_STYLE_COLONS,
-		["timeFormatPrecision"] = TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR,
+		["timeFormatPrecision"] = TIME_FORMAT_PRECISION_SECONDS,
 	},
 	BData = {
 		["lastVal"] = 0,
-		heat = {
-		
-		},
+		heat = {},
 	},
 }
 
@@ -35,10 +37,7 @@ function ThiefsAssistant.OnAddonLoad(eventType, addonName)
 	local saveData = ZO_SavedVars:NewAccountWide("ThiefsAssistantSavedVars", VERSION, nil, defaults)
 	ThiefsAssistant.savedVars = saveData
 
-	ThiefsAssistant.timeStyle = TIME_FORMAT_STYLE_COLONS
-	ThiefsAssistant.timePrecision = TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR
-	--ThiefsAssistant.timeStyle = saveData.window["timeFormatStyle"]
-	--ThiefsAssistant.timePrecision = saveData.window["timeFormatPrecision"]
+	ThiefsAssistant.timeStyle = saveData.window["timeFormatStyle"]
 
 	ThiefsAssistant.setUpMenu()
 
@@ -91,43 +90,35 @@ function ThiefsAssistant.OnAddonLoad(eventType, addonName)
 	
 	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "FenceTimer", xLocation, savedWindowData["showFenceResetTimer"])
 	AddLabel("FenceTimerTitle", xLocation + 25, savedWindowData["showFenceResetTimer"], "Fence Reset:")
-	AddLabel("FenceTimerValue", xLocation + 105, savedWindowData["showFenceResetTimer"], FormatTimeSeconds(timeSeconds, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	AddLabel("FenceTimerValue", xLocation + 105, savedWindowData["showFenceResetTimer"], FormatTimeSeconds(fenceResetTime, ThiefsAssistant.timeStyle))
 	if savedWindowData["showFenceResetTimer"] then xLocation = xLocation + 145 end
 
-	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "BountyTimer", xLocation, savedWindowData["showFenceResetTimer"])
+	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "BountyTimer", xLocation, savedWindowData["showBountyTimer"])
 	AddLabel("BountyTimerTitle", xLocation + 25, savedWindowData["showBountyTimer"], "Bounty Reset:")
-	AddLabel("BountyTimerValue", xLocation + 105, savedWindowData["showBountyTimer"], FormatTimeSeconds(0, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	AddLabel("BountyTimerValue", xLocation + 105, savedWindowData["showBountyTimer"], FormatTimeSeconds(0, ThiefsAssistant.timeStyle))
 	if savedWindowData["showBountyTimer"] then xLocation = xLocation + 145 end
 
 
 	-- The following event only triggers when bounty increases so updater is still necessary
 	-- EVENT_JUSTICE_INFAMY_UPDATED will also work
-	if(saveData.window["showBounty"]) then
-		EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_BOUNTY_PAYOFF_AMOUNT_UPDATED, function(event, oldBounty, newBounty, isInitialize)
+	EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_BOUNTY_PAYOFF_AMOUNT_UPDATED, function(event, oldBounty, newBounty, isInitialize)
+		if(ThiefsAssistant.savedVars.window["showBounty"]) then
 			GetControl(window, "BountyValue"):SetText(newBounty)
 			time = 0
-		end)
-		ThiefsAssistant.registeredForJusticeUpdate = true
-	else
-		ThiefsAssistant.registeredForJusticeUpdate = false
-	end
+		end
+	end)
 
-	if(ThiefsAssistant.savedVars.window["showSells"] or ThiefsAssistant.savedVars.window["showLaunders"]) then
-		EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_FENCE_UPDATE, function()
-			if(ThiefsAssistant.savedVars.window["showSells"]) then
-				local totalSells, sellsUsed = GetFenceSellTransactionInfo()
-				GetControl(window, "FenceSellsValue"):SetText(totalSells - sellsUsed .. "/" .. totalSells)
-			end
-			if(ThiefsAssistant.savedVars.window["showLaunders"]) then
-				local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
-				GetControl(window, "FenceLaundersValue"):SetText(totalLaunders - laundersUsed .. "/" .. totalLaunders)
-			end
-			time = 0
-		end)
-		ThiefsAssistant.registeredForFenceUpdate = true
-	else
-		ThiefsAssistant.registeredForFenceUpdate = false
-	end
+	EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_JUSTICE_FENCE_UPDATE, function()
+		if(ThiefsAssistant.savedVars.window["showSells"]) then
+			local totalSells, sellsUsed = GetFenceSellTransactionInfo()
+			GetControl(window, "FenceSellsValue"):SetText(totalSells - sellsUsed .. "/" .. totalSells)
+		end
+		if(ThiefsAssistant.savedVars.window["showLaunders"]) then
+			local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
+			GetControl(window, "FenceLaundersValue"):SetText(totalLaunders - laundersUsed .. "/" .. totalLaunders)
+		end
+		time = 0
+	end)
 
 	-- Restore position of window
 	if(saveData.window) then
@@ -146,24 +137,37 @@ end
 function ThiefsAssistant.UpdateAllTimers()
 	if(ThiefsAssistant.savedVars.window["showFenceResetTimer"]) then
 		local a, b, timeSeconds = GetFenceSellTransactionInfo()
-		GetControl(ThiefsAssistantWindow, "FenceTimerValue"):SetText(FormatTimeSeconds(timeSeconds, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+		GetControl(ThiefsAssistantWindow, "FenceTimerValue"):SetText(FormatTimeSeconds(timeSeconds, ThiefsAssistant.savedVars.window["timeFormatStyle"]))
 	end
-	if(ThiefsAssistant.savedVars.window["showBountyTimer"] and GetFullBountyPayoffAmount() > 0 and ThiefsAssistant.bountyWillHit0In - GetTimeStamp() > 0) then
-		GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(ThiefsAssistant.bountyWillHit0In - GetTimeStamp(), ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
-	else
-		GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(0, ThiefsAssistant.timeStyle, ThiefsAssistant.timePrecision))
+	if(ThiefsAssistant.savedVars.window["showBountyTimer"]) then
+		if(ThiefsAssistant.savedVars.window["needBountyForTimer"] and not (GetFullBountyPayoffAmount() > 0)) then
+			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetHidden(true)
+			GetControl(ThiefsAssistantWindow, "BountyTimerTitle"):SetHidden(true)
+			GetControl(ThiefsAssistantWindow, "TextureBountyTimer"):SetHidden(true)
+		else
+			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetHidden(false)
+			GetControl(ThiefsAssistantWindow, "BountyTimerTitle"):SetHidden(false)
+			GetControl(ThiefsAssistantWindow, "TextureBountyTimer"):SetHidden(false)
+		end
+		if(GetFullBountyPayoffAmount() > 0 and ThiefsAssistant.bountyWillHit0In - GetTimeStamp() > 0) then
+			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(ThiefsAssistant.bountyWillHit0In - GetTimeStamp(), ThiefsAssistant.savedVars.window["timeFormatStyle"]))
+		elseif(not ThiefsAssistant.savedVars.window["needBountyForTimer"]) then
+			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(0, ThiefsAssistant.savedVars.window["timeFormatStyle"]))
+		end
 	end
 end
 
 function ThiefsAssistantOnUpdate()
 	if(ThiefsAssistant.savedVars) then
 		time = time + 1
-		-- Every 30 frames update timers
-		if(time % 30 == 0) then
+		timerTime = timerTime + 1
+
+		if(timerTime == ThiefsAssistant.savedVars["updateSpeedTimers"]) then
+			timerTime = 0
 			ThiefsAssistant.UpdateAllTimers()
 		end
-		-- Every UPDATE_TIMER frames update values
-		if(time == UPDATE_TIMER) then
+
+		if(time == ThiefsAssistant.savedVars["updateSpeed"]) then
 			time = 0
 			if(not ThiefsAssistant.oldBounty or ThiefsAssistant.oldBounty ~= GetFullBountyPayoffAmount()) then
 				ThiefsAssistant.estimatedBountyTime = (GetFullBountyPayoffAmount() / (0.0050 + (0.0017 * (GetUnitLevel("player") - 1)))) + (GetPlayerInfamyData() / 2)	--estimated bounty time formula
@@ -188,7 +192,7 @@ function ThiefsAssistantOnUpdate()
 	end
 end
 
-local function UpdateWindowFromSettings()
+function ThiefsAssistant.UpdateWindowFromSettings()
 	savedWindowData = ThiefsAssistant.savedVars.window
 	win = ThiefsAssistantWindow
 	xLocation = 5
@@ -273,8 +277,5 @@ local function UpdateWindowFromSettings()
 		GetControl(win, "BountyTimerValue"):SetHidden(true)
 	end
 end
-
--- for the mainMenu.lua file to use for window settings updates
-ThiefsAssistant.UpdateSettings = UpdateWindowFromSettings
 
 EVENT_MANAGER:RegisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED, ThiefsAssistant.OnAddonLoad)

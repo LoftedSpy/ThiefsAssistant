@@ -1,6 +1,6 @@
 ## Title: |cFF0000Thief's Assistant|r
 ## APIVersion: 100019
-## Version: 0.1
+## Version: 0.6
 ## Description: Displays helpful information regarding the justice meter and manages stolen items.
 ## Author: LoftedSpy
 ## OptionalDependsOn: LibAddonMenu-2.0

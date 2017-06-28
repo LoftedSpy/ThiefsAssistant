@@ -8,6 +8,7 @@ local panelData = {
 	version = ThiefsAssistant.version,
 	--website
 	keywords = "thiefsassistantoptions thiefsassistantsettings",
+	registerForRefresh = true;
 }
 
 local optionsData = {
@@ -17,8 +18,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showSells"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showSells"] = value
-			local UpdateSettings = ThiefsAssistant.UpdateSettings
-			UpdateSettings()
+			ThiefsAssistant.UpdateWindowFromSettings()
 		end,
 	},
 	[2] = {
@@ -27,55 +27,67 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showLaunders"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showLaunders"] = value
-			local UpdateSettings = ThiefsAssistant.UpdateSettings
-			UpdateSettings()
+			ThiefsAssistant.UpdateWindowFromSettings()
 		end,
 	},
 	[3] = {
 		type = "checkbox",
 		name = "Show time remaining until fence resets",
-		getFunc = function() return ThiefsAssistant.savedVars.window["showLaunders"] end,
+		getFunc = function() return ThiefsAssistant.savedVars.window["showFenceResetTimer"] end,
 		setFunc = function(value)
-			ThiefsAssistant.savedVars.window["showLaunders"] = value
-			local UpdateSettings = ThiefsAssistant.UpdateSettings
-			UpdateSettings()
+			ThiefsAssistant.savedVars.window["showFenceResetTimer"] = value
+			ThiefsAssistant.UpdateWindowFromSettings()
 		end,
 	},
 	[4] = {
+		type = "checkbox",
+		name = "Show time remaining until bounty expires",
+		getFunc = function() return ThiefsAssistant.savedVars.window["showBountyTimer"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["showBountyTimer"] = value
+			ThiefsAssistant.UpdateWindowFromSettings()
+		end,
+	},
+	[5] = {
+		type = "checkbox",
+		name = "Only display bounty timer if you have a bounty",
+		getFunc = function() return ThiefsAssistant.savedVars.window["needBountyForTimer"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["needBountyForTimer"] = value
+			ThiefsAssistant.UpdateWindowFromSettings()
+		end,
+		disabled = function() return not ThiefsAssistant.savedVars.window["showBountyTimer"] end, 
+	},
+	[6] = {
 		type = "dropdown",
 		name = "Timer style",
-		choices = {"12 hour", "24 hour", "Largest unit", "Descriptive 24 hour", "Descriptive 12 hour"},
-		choicesValues = {
-			{TIME_FORMAT_PRECISION_TWELVE_HOUR, TIME_FORMAT_STYLE_COLONS},
-			{TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR, TIME_FORMAT_STYLE_COLONS},
-			{TIME_FORMAT_PRECISION_SECONDS, TIME_FORMAT_STYLE_SHOW_LARGEST_UNIT_DESCRIPTIVE},
-			{TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR, TIME_FORMAT_STYLE_DESCRIPTIVE_MINIMAL},
-			{TIME_FORMAT_PRECISION_TWELVE_HOUR, TIME_FORMAT_STYLE_DESCRIPTIVE_MINIMAL},
-		},
-		getFunc = function()
-			local precision = ThiefsAssistant.window["timeFormatPrecision"]
-			local style = ThiefsAssistant.window["timeFormatStyle"]
-			if(precision == TIME_FORMAT_PRECISION_TWELVE_HOUR) then
-				if(style == TIME_FORMAT_STYLE_COLONS) then
-					return "12 hour"
-				else
-					return "Descriptive 12 hour"
-				end
-			elseif(precision == TIME_FORMAT_PRECISION_TWENTY_FOUR_HOUR) then
-				if(style == TIME_FORMAT_STYLE_COLONS) then
-					return "24 hour"
-				else
-					return "Descriptive 24 hour"
-				end
-			else
-				return "Largest unit"
-			end
-		end,
+		choices = {"Default", "Largest unit", "Descriptive"},
+		choicesValues = {TIME_FORMAT_STYLE_COLONS, TIME_FORMAT_STYLE_SHOW_LARGEST_UNIT_DESCRIPTIVE, TIME_FORMAT_STYLE_DESCRIPTIVE_MINIMAL},
+		getFunc = function() return ThiefsAssistant.savedVars.window["timeFormatStyle"] end,
 		setFunc = function(var)
-			ThiefsAssistant.savedVars.window["timeFormatPrecision"] = var[1]
-			ThiefsAssistant.savedVars.window["timeFormatStyle"] = var[2]
+			ThiefsAssistant.savedVars.window["timeFormatStyle"] = var
 			ThiefsAssistant.UpdateAllTimers()
 		end,
+		tooltip = "This affects the bounty and fence timers",
+		disabled = function() return not (ThiefsAssistant.savedVars.window["showFenceResetTimer"] or ThiefsAssistant.savedVars.window["showBountyTimer"]) end,
+	},
+	[7] = {
+		type = "slider",
+		name = "Refresh speed (in frames)",
+		getFunc = function() return ThiefsAssistant.savedVars["updateSpeed"] end,
+		setFunc = function(value) ThiefsAssistant.savedVars["updateSpeed"] = value end,
+		min = 1,
+		max = 300,
+		warning = "This may cause lag at low values",
+	},
+	[8] = {
+		type = "slider",
+		name = "Timer refresh rate (in frames)",
+		getFunc = function() return ThiefsAssistant.savedVars["updateSpeedTimers"] end,
+		setFunc = function(value) ThiefsAssistant.savedVars["updateSpeedTimers"] = value end,
+		min = 1,
+		max = 60,
+		warning = "This may cause lag at low values",
 	},
 }
 
