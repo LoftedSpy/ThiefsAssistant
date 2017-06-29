@@ -11,5 +11,15 @@
       </Controls>
     </TopLevelControl>
     <Label name="ThiefsAssistantLabelTemplate" text="default" font="ZoFontGameSmall" virtual="true" />
+    <Control name="ThiefsAssistantGroupTemplate" virtual="true">
+      <Controls>
+        <Texture name="$(parent)Icon" textureFile="esoui/art/stats/justice_bounty_icon-white.dds">
+          <Dimensions y="20" x="20" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" />
+        </Texture>
+        <Label name="$(parent)Title" text="title" font="ZoFontGameSmall" />
+        <Label name="$(parent)Value" text="value" font="ZoFontGameSmall" />
+      </Controls>
+    </Control>
   </Controls>
 </GuiXml>

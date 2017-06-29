@@ -3,7 +3,7 @@ ThiefsAssistant = {}
 
 local ADDON_NAME = "ThiefsAssistant"
 ThiefsAssistant.name = ADDON_NAME
-local VERSION = 0.6
+local VERSION = 0.65
 ThiefsAssistant.version = VERSION
 --local UPDATE_TIMER = 30
 local time = 0
@@ -63,39 +63,38 @@ function ThiefsAssistant.OnAddonLoad(eventType, addonName)
 		lbl:SetHidden(not hidden)
 	end
 
+	local function BuildGroup(name, xCoords, shown, icon, title, value)
+		ctrl = WINDOW_MANAGER:CreateControlFromVirtual(("$(parent)" .. name), window, "ThiefsAssistantGroupTemplate")
+		ctrl:SetAnchor(TOPLEFT, window, TOPLEFT, xCoords[1], 5)
+		ctrl:SetHidden(not shown)
+		ctrl:GetChild(1):SetTexture(icon)
+		ctrl:GetChild(2):SetText(title)
+		ctrl:GetChild(2):SetAnchor(TOPLEFT, ctrl, TOPLEFT, xCoords[2])
+		ctrl:GetChild(3):SetText(value)
+		ctrl:GetChild(3):SetAnchor(TOPLEFT, ctrl, TOPLEFT, xCoords[3])
+	end
+
 	-- Add textures and controls
 	local savedWindowData = saveData.window
 	local xLocation = 5
-	
-	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "Bounty", xLocation, savedWindowData["showBounty"])
-	AddLabel("BountyTitle", xLocation + 25, savedWindowData["showBounty"], "Bounty:")
-	AddLabel("BountyValue", xLocation + 70, savedWindowData["showBounty"], GetFullBountyPayoffAmount())
+
+	BuildGroup("Bounty", {xLocation, xLocation + 25, xLocation + 70}, savedWindowData["showBounty"], "esoui/art/stats/justice_bounty_icon-white.dds", "Bounty:", GetFullBountyPayoffAmount())
 	if savedWindowData["showBounty"] then xLocation = xLocation + 125 end
 
 	local totalSells, sellsUsed, fenceResetTime = GetFenceSellTransactionInfo()
 	
-	NewTexture("esoui/art/stats/justice_bounty_icon-red.dds", "FenceSells", xLocation, savedWindowData["showSells"])
-	AddLabel("FenceSellsTitle", xLocation + 25, savedWindowData["showSells"], "Sells Remaining:")
-	AddLabel("FenceSellsValue", xLocation + 125, savedWindowData["showSells"], totalSells - sellsUsed .. "/" .. totalSells)
+	BuildGroup("FenceSells", {xLocation, 25, 125}, savedWindowData["showSells"], "esoui/art/stats/justice_bounty_icon-red.dds", "Sells Remaining:", totalSells - sellsUsed .. "/" .. totalSells)
 	if savedWindowData["showSells"] then xLocation = xLocation + 155 end
 
 	local totalLaunders, laundersUsed = GetFenceLaunderTransactionInfo()
 
-	
-	NewTexture("esoui/art/stats/justice_bounty_icon-red.dds", "FenceLaunders", xLocation, savedWindowData["showLaunders"])
-	AddLabel("FenceLaundersTitle", xLocation + 25, savedWindowData["showLaunders"], "Launders Remaining:")
-	AddLabel("FenceLaundersValue", xLocation + 145, savedWindowData["showLaunders"], totalLaunders - laundersUsed .. "/" .. totalLaunders)
+	BuildGroup("FenceLaunders", {xLocation, 25, 145}, savedWindowData["showLaunders"], "esoui/art/stats/justice_bounty_icon-red.dds", "Launders Remaining:", totalLaunders - laundersUsed .. "/" .. totalLaunders)
 	if savedWindowData["showLaunders"] then xLocation = xLocation + 180 end
 
-	
-	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "FenceTimer", xLocation, savedWindowData["showFenceResetTimer"])
-	AddLabel("FenceTimerTitle", xLocation + 25, savedWindowData["showFenceResetTimer"], "Fence Reset:")
-	AddLabel("FenceTimerValue", xLocation + 105, savedWindowData["showFenceResetTimer"], FormatTimeSeconds(fenceResetTime, ThiefsAssistant.timeStyle))
+	BuildGroup("FenceTimer", {xLocation, 25, 105}, savedWindowData["showFenceResetTimer"], "esoui/art/stats/justice_bounty_icon-white.dds", "Fence Reset:", FormatTimeSeconds(fenceResetTime, ThiefsAssistant.timeStyle))
 	if savedWindowData["showFenceResetTimer"] then xLocation = xLocation + 145 end
 
-	NewTexture("esoui/art/stats/justice_bounty_icon-white.dds", "BountyTimer", xLocation, savedWindowData["showBountyTimer"])
-	AddLabel("BountyTimerTitle", xLocation + 25, savedWindowData["showBountyTimer"], "Bounty Reset:")
-	AddLabel("BountyTimerValue", xLocation + 105, savedWindowData["showBountyTimer"], FormatTimeSeconds(0, ThiefsAssistant.timeStyle))
+	BuildGroup("BountyTimer", {xLocation, 25, 105}, savedWindowData["showBountyTimer"], "esoui/art/stats/justice_bounty_icon-white.dds", "Bounty Reset:", FormatTimeSeconds(0, ThiefsAssistant.timeStyle))
 	if savedWindowData["showBountyTimer"] then xLocation = xLocation + 145 end
 
 
@@ -141,13 +140,9 @@ function ThiefsAssistant.UpdateAllTimers()
 	end
 	if(ThiefsAssistant.savedVars.window["showBountyTimer"]) then
 		if(ThiefsAssistant.savedVars.window["needBountyForTimer"] and not (GetFullBountyPayoffAmount() > 0)) then
-			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetHidden(true)
-			GetControl(ThiefsAssistantWindow, "BountyTimerTitle"):SetHidden(true)
-			GetControl(ThiefsAssistantWindow, "TextureBountyTimer"):SetHidden(true)
+			GetControl(ThiefsAssistantWindow, "BountyTimer"):SetHidden(true)
 		else
-			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetHidden(false)
-			GetControl(ThiefsAssistantWindow, "BountyTimerTitle"):SetHidden(false)
-			GetControl(ThiefsAssistantWindow, "TextureBountyTimer"):SetHidden(false)
+			GetControl(ThiefsAssistantWindow, "BountyTimer"):SetHidden(false)
 		end
 		if(GetFullBountyPayoffAmount() > 0 and ThiefsAssistant.bountyWillHit0In - GetTimeStamp() > 0) then
 			GetControl(ThiefsAssistantWindow, "BountyTimerValue"):SetText(FormatTimeSeconds(ThiefsAssistant.bountyWillHit0In - GetTimeStamp(), ThiefsAssistant.savedVars.window["timeFormatStyle"]))
@@ -196,85 +191,46 @@ function ThiefsAssistant.UpdateWindowFromSettings()
 	savedWindowData = ThiefsAssistant.savedVars.window
 	win = ThiefsAssistantWindow
 	xLocation = 5
+	
 	if(savedWindowData["showBounty"]) then
-		GetControl(win, "TextureBounty"):SetHidden(false)
-		GetControl(win, "TextureBounty"):ClearAnchors()
-		GetControl(win, "TextureBounty"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
-		GetControl(win, "BountyTitle"):SetHidden(false)
-		GetControl(win, "BountyTitle"):ClearAnchors()
-		GetControl(win, "BountyTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
-		GetControl(win, "BountyValue"):SetHidden(false)
-		GetControl(win, "BountyValue"):ClearAnchors()
-		GetControl(win, "BountyValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 70, 5)
+		GetControl(win, "Bounty"):SetHidden(false)
+		GetControl(win, "Bounty"):ClearAnchors()
+		GetControl(win, "Bounty"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
 		xLocation = xLocation + 125
 	else
-		GetControl(win, "TextureBounty"):SetHidden(true)
-		GetControl(win, "BountyTitle"):SetHidden(true)
-		GetControl(win, "BountyValue"):SetHidden(true)
+		GetControl(win, "Bounty"):SetHidden(true)
 	end
 	if(savedWindowData["showSells"]) then
-		GetControl(win, "TextureFenceSells"):SetHidden(false)
-		GetControl(win, "TextureFenceSells"):ClearAnchors()
-		GetControl(win, "TextureFenceSells"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
-		GetControl(win, "FenceSellsTitle"):SetHidden(false)
-		GetControl(win, "FenceSellsTitle"):ClearAnchors()
-		GetControl(win, "FenceSellsTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
-		GetControl(win, "FenceSellsValue"):SetHidden(false)
-		GetControl(win, "FenceSellsValue"):ClearAnchors()
-		GetControl(win, "FenceSellsValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 125, 5)
+		GetControl(win, "FenceSells"):SetHidden(false)
+		GetControl(win, "FenceSells"):ClearAnchors()
+		GetControl(win, "FenceSells"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
 		xLocation = xLocation + 155
 	else
-		GetControl(win, "TextureFenceSells"):SetHidden(true)
-		GetControl(win, "FenceSellsTitle"):SetHidden(true)
-		GetControl(win, "FenceSellsValue"):SetHidden(true)
+		GetControl(win, "FenceSells"):SetHidden(true)
 	end
 	if(savedWindowData["showLaunders"]) then
-		GetControl(win, "TextureFenceLaunders"):SetHidden(false)
-		GetControl(win, "TextureFenceLaunders"):ClearAnchors()
-		GetControl(win, "TextureFenceLaunders"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
-		GetControl(win, "FenceLaundersTitle"):SetHidden(false)
-		GetControl(win, "FenceLaundersTitle"):ClearAnchors()
-		GetControl(win, "FenceLaundersTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
-		GetControl(win, "FenceLaundersValue"):SetHidden(false)
-		GetControl(win, "FenceLaundersValue"):ClearAnchors()
-		GetControl(win, "FenceLaundersValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 145, 5)
+		GetControl(win, "FenceLaunders"):SetHidden(false)
+		GetControl(win, "FenceLaunders"):ClearAnchors()
+		GetControl(win, "FenceLaunders"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
 		xLocation = xLocation + 180
 	else
-		GetControl(win, "TextureFenceLaunders"):SetHidden(true)
-		GetControl(win, "FenceLaundersTitle"):SetHidden(true)
-		GetControl(win, "FenceLaundersValue"):SetHidden(true)
+		GetControl(win, "FenceLaunders"):SetHidden(true)
 	end
 	if(savedWindowData["showFenceResetTimer"]) then
-		GetControl(win, "TextureFenceTimer"):SetHidden(false)
-		GetControl(win, "TextureFenceTimer"):ClearAnchors()
-		GetControl(win, "TextureFenceTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
-		GetControl(win, "FenceTimerTitle"):SetHidden(false)
-		GetControl(win, "FenceTimerTitle"):ClearAnchors()
-		GetControl(win, "FenceTimerTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
-		GetControl(win, "FenceTimerValue"):SetHidden(false)
-		GetControl(win, "FenceTimerValue"):ClearAnchors()
-		GetControl(win, "FenceTimerValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 105, 5)
+		GetControl(win, "FenceTimer"):SetHidden(false)
+		GetControl(win, "FenceTimer"):ClearAnchors()
+		GetControl(win, "FenceTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
 		xLocation = xLocation + 145
 	else
-		GetControl(win, "TextureFenceTimer"):SetHidden(true)
-		GetControl(win, "FenceTimerTitle"):SetHidden(true)
-		GetControl(win, "FenceTimerValue"):SetHidden(true)
+		GetControl(win, "FenceTimer"):SetHidden(true)
 	end
 	if(savedWindowData["showBountyTimer"]) then
-		GetControl(win, "TextureBountyTimer"):SetHidden(false)
-		GetControl(win, "TextureBountyTimer"):ClearAnchors()
-		GetControl(win, "TextureBountyTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
-		GetControl(win, "BountyTimerTitle"):SetHidden(false)
-		GetControl(win, "BountyTimerTitle"):ClearAnchors()
-		GetControl(win, "BountyTimerTitle"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 25, 5)
-		GetControl(win, "BountyTimerValue"):SetHidden(false)
-		GetControl(win, "BountyTimerValue"):ClearAnchors()
-		GetControl(win, "BountyTimerValue"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation + 105, 5)
+		GetControl(win, "BountyTimer"):SetHidden(false)
+		GetControl(win, "BountyTimer"):ClearAnchors()
+		GetControl(win, "BountyTimer"):SetAnchor(TOPLEFT, win, TOPLEFT, xLocation, 5)
 		xLocation = xLocation + 145
 	else
-		GetControl(win, "TextureBountyTimer"):SetHidden(true)
-		GetControl(win, "BountyTimerTitle"):SetHidden(true)
-		GetControl(win, "BountyTimerValue"):SetHidden(true)
+		GetControl(win, "BountyTimer"):SetHidden(true)
 	end
 end
 
