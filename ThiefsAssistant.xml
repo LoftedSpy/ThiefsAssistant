@@ -1,7 +1,7 @@
 <GuiXml>
   <Controls>
     <TopLevelControl name="ThiefsAssistantWindow" mouseEnabled="true" movable="true" clampedToScreen="true">
-      <Dimensions y="30" x="800" />
+      <Dimensions y="30" x="1000" />
       <Anchor point="CENTER" />
       <OnUpdate>
         ThiefsAssistantOnUpdate()

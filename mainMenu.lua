@@ -89,6 +89,78 @@ local optionsData = {
 		max = 60,
 		warning = "This may cause lag at low values",
 	},
+	[9] = {
+		type = "submenu",
+		name = "Stolen Items Manager",
+		controls = {
+			[1] = {
+				type = "description",
+				text = "BY ENABLING DESTRUCTION OF ITEMS YOU MAY LOSE ITEMS UNINTENTIONALLY!\nDestruction of items will not be enabled until you reload the UI so that you can modify the settings to your preference first.",
+				title = "|c800000|t30:30:EsoUI/Art/Miscellaneous/ESO_Icon_Warning.dds:inheritcolor|tWARNING|t30:30:EsoUI/Art/Miscellaneous/ESO_Icon_Warning.dds:inheritcolor|t|r"
+			},
+			[2] = {
+				type = "divider",
+			},
+			[3] = {
+				type = "checkbox",
+				name = "Destroy unwanted items",
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["allowDestruction"] = value end,
+				requiresReload = true,
+			},
+			[4] = {
+				type = "checkbox",
+				name = "Destroy stolen ingredients",
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["destroyIngredients"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["destroyIngredients"] = value end,
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+			[5] = {
+				type = "checkbox",
+				name = "Destroy stolen food",
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["destroyFood"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["destroyFood"] = value end,
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+			[6] = {
+				type = "checkbox",
+				name = "Destroy stolen recipes only if they are known",
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["destroyKnownRecipes"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["destroyKnownRecipes"] = value end,
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+			[7] = {
+				type = "dropdown",
+				name = "Destroy stolen recipes of this quality or less",
+				choices = {"Do not destroy", "Normal", "Fine", "Superior", "Epic", "Legendary"},
+				choicesValues = {ITEM_QUALITY_TRASH, ITEM_QUALITY_NORMAL, ITEM_QUALITY_MAGIC, ITEM_QUALITY_ARCANE, ITEM_QUALITY_ARTIFACT, ITEM_QUALITY_LEGENDARY},
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["destroyRecipesOfRarity"] end,
+				setFunc = function(var) ThiefsAssistant.savedVars.itemManager["destroyRecipesOfRarity"] = var end,
+				tooltip = "If known recipes only is enabled, this will only destroy known recipes",
+				choicesTooltips = {"", "White items", "Green items", "Blue items", "Purple items", "Gold items"},
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+			[8] = {
+				type = "slider",
+				name = "Destroy gear worth less than",
+				getFunc = function() return ThiefsAssistant.savedVars["destroyGearUnderValue"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars["destroyGearUnderValue"] = value end,
+				min = 0,
+				max = 1000,
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+			[9] = {
+				type = "dropdown",
+				name = "Destroy stolen treasures of this quality or less",
+				choices = {"Do not destroy", "Normal", "Fine", "Superior", "Epic"},
+				choicesValues = {ITEM_QUALITY_TRASH, ITEM_QUALITY_NORMAL, ITEM_QUALITY_MAGIC, ITEM_QUALITY_ARCANE, ITEM_QUALITY_ARTIFACT},
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["destroyTreasuresOfRarity"] end,
+				setFunc = function(var) ThiefsAssistant.savedVars.itemManager["destroyTreasuresOfRarity"] = var end,
+				choicesTooltips = {"", "White items (40)", "Green items (100)", "Blue items (250)", "Purple items (1500)"},
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			},
+		},
+	},
 }
 
 ThiefsAssistant.setUpMenu = function()
