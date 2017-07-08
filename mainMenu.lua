@@ -1,5 +1,8 @@
 local ADDON_NAME = ThiefsAssistant.name
 
+local DIRECTION_HORIZONTAL = 0
+local DIRECTION_VERTICAL = 1
+
 local panelData = {
 	type = "panel",
 	name = "Thief's Assistant Options",
@@ -18,7 +21,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showSells"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showSells"] = value
-			ThiefsAssistant.UpdateWindowFromSettings()
+			ThiefsAssistant:UpdateWindowFromSettings()
 		end,
 	},
 	[2] = {
@@ -27,7 +30,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showLaunders"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showLaunders"] = value
-			ThiefsAssistant.UpdateWindowFromSettings()
+			ThiefsAssistant:UpdateWindowFromSettings()
 		end,
 	},
 	[3] = {
@@ -36,7 +39,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showFenceResetTimer"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showFenceResetTimer"] = value
-			ThiefsAssistant.UpdateWindowFromSettings()
+			ThiefsAssistant:UpdateWindowFromSettings()
 		end,
 	},
 	[4] = {
@@ -45,7 +48,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["showBountyTimer"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["showBountyTimer"] = value
-			ThiefsAssistant.UpdateWindowFromSettings()
+			ThiefsAssistant:UpdateWindowFromSettings()
 		end,
 	},
 	[5] = {
@@ -54,7 +57,7 @@ local optionsData = {
 		getFunc = function() return ThiefsAssistant.savedVars.window["needBountyForTimer"] end,
 		setFunc = function(value)
 			ThiefsAssistant.savedVars.window["needBountyForTimer"] = value
-			ThiefsAssistant.UpdateWindowFromSettings()
+			ThiefsAssistant:UpdateWindowFromSettings()
 		end,
 		disabled = function() return not ThiefsAssistant.savedVars.window["showBountyTimer"] end, 
 	},
@@ -90,6 +93,79 @@ local optionsData = {
 		warning = "This may cause lag at low values",
 	},
 	[9] = {
+		type = "dropdown",
+		name = "Chat notifications on picking up rare items",
+		choices = {"Do not notify", "Normal", "Fine", "Superior", "Epic", "Legendary"},
+		choicesValues = {ITEM_QUALITY_TRASH, ITEM_QUALITY_NORMAL, ITEM_QUALITY_MAGIC, ITEM_QUALITY_ARCANE, ITEM_QUALITY_ARTIFACT, ITEM_QUALITY_LEGENDARY},
+		getFunc = function() return ThiefsAssistant.savedVars.window["minQualityNotify"] end,
+		setFunc = function(var) ThiefsAssistant.savedVars.window["minQualityNotify"] = var end,
+		choicesTooltips = {"", "White items", "Green items", "Blue items", "Purple items", "Gold items"},
+	},
+	[10] = {
+		type = "slider",
+		name = "Background alpha",
+		getFunc = function() return ThiefsAssistant.savedVars.window["alphaBg"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["alphaBg"] = value
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+		min = 0,
+		max = 1,
+		step = 0.01,
+		decimals = 2,
+	},
+	[11] = {
+		type = "slider",
+		name = "Text alpha",
+		getFunc = function() return ThiefsAssistant.savedVars.window["alphaText"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["alphaText"] = value
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+		min = 0,
+		max = 1,
+		step = 0.01,
+		decimals = 2,
+	},
+	[12] = {
+		type = "checkbox",
+		name = "Display value of stolen treasures",
+		getFunc = function() return ThiefsAssistant.savedVars.window["showInvValue"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["showInvValue"] = value
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+	},
+	[13] = {
+		type = "checkbox",
+		name = "Display number of stolen items in inventory",
+		getFunc = function() return ThiefsAssistant.savedVars.window["showInvNumItems"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["showInvNumItems"] = value
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+	},
+	[14] = {
+		type = "checkbox",
+		name = "Show descriptions of stats",
+		getFunc = function() return ThiefsAssistant.savedVars.window["displayTitles"] end,
+		setFunc = function(value)
+			ThiefsAssistant.savedVars.window["displayTitles"] = value
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+	},
+	[15] = {
+		type = "dropdown",
+		name = "Direction of window",
+		choices = {"Horizontal", "Vertical"},
+		choicesValues = {DIRECTION_HORIZONTAL, DIRECTION_VERTICAL},
+		getFunc = function() return ThiefsAssistant.savedVars.window["direction"] end,
+		setFunc = function(var)
+			ThiefsAssistant.savedVars.window["direction"] = var
+			ThiefsAssistant:UpdateWindowFromSettings()
+		end,
+	},
+	[16] = {
 		type = "submenu",
 		name = "Stolen Items Manager",
 		controls = {
@@ -103,7 +179,7 @@ local optionsData = {
 			},
 			[3] = {
 				type = "checkbox",
-				name = "Destroy unwanted items",
+				name = "|c800000Destroy unwanted items|r",
 				getFunc = function() return ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
 				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["allowDestruction"] = value end,
 				requiresReload = true,
@@ -159,6 +235,13 @@ local optionsData = {
 				choicesTooltips = {"", "White items (40)", "Green items (100)", "Blue items (250)", "Purple items (1500)"},
 				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
 			},
+			[10] = {
+				type = "checkbox",
+				name = "Chat notification on destruction",
+				getFunc = function() return ThiefsAssistant.savedVars.itemManager["notifyOnDestroy"] end,
+				setFunc = function(value) ThiefsAssistant.savedVars.itemManager["notifyOnDestroy"] = value end,
+				disabled = function() return not ThiefsAssistant.savedVars.itemManager["allowDestruction"] end,
+			}
 		},
 	},
 }
